@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect } from 'react';
 import { 
     Box,
@@ -21,7 +23,6 @@ const Upcoming = () => {
     const [todos, setTodos] = useState([]);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [currentUser, setCurrentUser] = useState(null);
-    const [expandedTodoId, setExpandedTodoId] = useState(null);
 
     useEffect(() => {
         fetchTodos();
@@ -35,10 +36,16 @@ const Upcoming = () => {
         try {
             const response = await axios.get('https://677a9e66671ca030683469a3.mockapi.io/todo/createTodo');
             const currentDateTime = new Date();
-            const validTodos = response.data.filter(todo => todo.title && todo.title.trim());
-            const futureTodos = validTodos.filter(todo => new Date(todo.dueDateTimestamp) > currentDateTime);
-            const sortedTodos = futureTodos.sort((a, b) => a.dueDateTimestamp - b.dueDateTimestamp);
-            setTodos(sortedTodos);
+            
+            const todayEnd = new Date(currentDateTime);
+            todayEnd.setHours(23, 59, 59, 999);
+
+            const validTodos = response.data.filter(todo => {
+                const todoDateTime = new Date(todo.dueDateTimestamp);
+                return todoDateTime > todayEnd;
+            });
+
+            setTodos(validTodos.sort((a, b) => a.dueDateTimestamp - b.dueDateTimestamp));
         } catch (error) {
             console.error('Error fetching todos:', error);
         }
@@ -129,14 +136,10 @@ const Upcoming = () => {
                                                 onChange={() => handleDeleteTodo(todo.id)}
                                             />
                                             <div className="todo-content">
-                                                <Typography 
-                                                    className="todo-title"
-                                                    onClick={() => setExpandedTodoId(expandedTodoId === todo.id ? null : todo.id)}
-                                                    sx={{ cursor: 'pointer' }}
-                                                >
+                                                <Typography className="todo-title">
                                                     {todo.title}
                                                 </Typography>
-                                                {expandedTodoId === todo.id && todo.description && (
+                                                {todo.description && (
                                                     <Typography className="todo-description">
                                                         {todo.description}
                                                     </Typography>
@@ -167,6 +170,3 @@ const Upcoming = () => {
 };
 
 export default Upcoming;
-
-
-
