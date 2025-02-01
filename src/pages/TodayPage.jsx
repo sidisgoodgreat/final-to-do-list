@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import { 
     Box,
     IconButton,
@@ -22,7 +21,6 @@ const TodayPage = () => {
     const [todos, setTodos] = useState({ overdue: [], today: [] });
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [currentUser, setCurrentUser] = useState(null);
-    const [expandedTodoId, setExpandedTodoId] = useState(null);
 
     useEffect(() => {
         fetchTodos();
@@ -144,14 +142,10 @@ const TodayPage = () => {
                                                 onChange={() => handleDeleteTodo(todo.id)}
                                             />
                                             <div className="todo-content">
-                                                <Typography 
-                                                    className="todo-title"
-                                                    onClick={() => setExpandedTodoId(expandedTodoId === todo.id ? null : todo.id)}
-                                                    sx={{ cursor: 'pointer' }}
-                                                >
+                                                <Typography className="todo-title">
                                                     {todo.title}
                                                 </Typography>
-                                                {expandedTodoId === todo.id && todo.description && (
+                                                {todo.description && (
                                                     <Typography className="todo-description">
                                                         {todo.description}
                                                     </Typography>
@@ -190,14 +184,10 @@ const TodayPage = () => {
                                             onChange={() => handleDeleteTodo(todo.id)}
                                         />
                                         <div className="todo-content">
-                                            <Typography 
-                                                className="todo-title"
-                                                onClick={() => setExpandedTodoId(expandedTodoId === todo.id ? null : todo.id)}
-                                                sx={{ cursor: 'pointer' }}
-                                            >
+                                            <Typography className="todo-title">
                                                 {todo.title}
                                             </Typography>
-                                            {expandedTodoId === todo.id && todo.description && (
+                                            {todo.description && (
                                                 <Typography className="todo-description">
                                                     {todo.description}
                                                 </Typography>
