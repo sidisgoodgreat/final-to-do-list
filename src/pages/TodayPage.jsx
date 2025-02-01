@@ -28,8 +28,6 @@ const TodayPage = () => {
         if (userData) {
             setCurrentUser(JSON.parse(userData));
         }
-        const interval = setInterval(fetchTodos, 60000);
-        return () => clearInterval(interval);
     }, []);
 
     const fetchTodos = async () => {
@@ -47,16 +45,12 @@ const TodayPage = () => {
 
             const overdueTodos = validTodos.filter(todo => {
                 const todoDateTime = new Date(todo.dueDateTimestamp);
-                const todoDate = new Date(todoDateTime).setHours(0, 0, 0, 0);
-                const today = new Date(todayStart).setHours(0, 0, 0, 0);
-                return todoDate < today;
+                return todoDateTime < todayStart;
             });
 
             const todayTodos = validTodos.filter(todo => {
                 const todoDateTime = new Date(todo.dueDateTimestamp);
-                const todoDate = new Date(todoDateTime).setHours(0, 0, 0, 0);
-                const today = new Date(todayStart).setHours(0, 0, 0, 0);
-                return todoDate === today;
+                return todoDateTime >= todayStart && todoDateTime <= todayEnd;
             });
 
             setTodos({
