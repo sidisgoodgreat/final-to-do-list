@@ -27,13 +27,17 @@ const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [selectedDate, setSelectedDate] = useState(new Date(2025, 0, 19, 21, 0, 0));
-    const [selectedTime, setSelectedTime] = useState('21:00');
+    const currentDateTime = new Date();
+    const [selectedDate, setSelectedDate] = useState(currentDateTime);
+    const [selectedTime, setSelectedTime] = useState(
+        currentDateTime.getHours().toString().padStart(2, '0') + ':' + 
+        (currentDateTime.getMinutes() >= 30 ? '30' : '00')
+    );
     const [error, setError] = useState('');
     const [newTodo, setNewTodo] = useState({
         title: '',
         description: '',
-        dueDateTimestamp: new Date(2025, 0, 19, 21, 0, 0),
+        dueDateTimestamp: currentDateTime,
         reminder: 'none',
         repeat: 'never',
         status: 'new',
@@ -68,7 +72,7 @@ const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
             const [hours, minutes] = selectedTime.split(':');
             combinedDateTime.setHours(parseInt(hours), parseInt(minutes));
 
-            if (combinedDateTime < new Date(2025, 0, 19, 21, 0, 0)) {
+            if (combinedDateTime < currentDateTime) {
                 setError('Cannot create todos in the past');
                 return;
             }
@@ -92,19 +96,28 @@ const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
     };
 
     const resetForm = () => {
+        const resetDateTime = new Date();
         setNewTodo({
             title: '',
             description: '',
-            dueDateTimestamp: new Date(2025, 0, 19, 21, 0, 0),
+            dueDateTimestamp: resetDateTime,
             reminder: 'none',
             repeat: 'never',
             status: 'new',
             active: 1,
             assignee: null
         });
-        setSelectedDate(new Date(2025, 0, 19, 21, 0, 0));
-        setSelectedTime('21:00');
+        setSelectedDate(resetDateTime);
+        setSelectedTime(
+            resetDateTime.getHours().toString().padStart(2, '0') + ':' + 
+            (resetDateTime.getMinutes() >= 30 ? '30' : '00')
+        );
         setError('');
+    };
+
+    const formatTimeForDisplay = (hour, minute, period) => {
+        const h = hour === 0 ? 12 : hour;
+        return `${h}:${minute} ${period}`;
     };
 
     return (
@@ -129,9 +142,15 @@ const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
                 }}
             >
                 <button className="add-button" onClick={() => setDialogOpen(true)}>+</button>
-                <div className="calendar-icon">{new Date(2025, 0, 19).getDate()}</div>
+                <div 
+                    className="calendar-icon" 
+                    onClick={() => navigate('/today')}
+                    style={{ cursor: 'pointer' }}
+                >
+                    {currentDateTime.getDate()}
+                </div>
                 <IconButton 
-                    onClick={() => navigate(currentPage === 'today' ? '/upcoming' : '/today')}
+                    onClick={() => currentPage === 'today' && navigate('/upcoming')}
                     className="nav-button"
                 >
                     <CalendarTodayIcon />
@@ -207,7 +226,7 @@ const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
                             selected={selectedDate}
                             onChange={setSelectedDate}
                             dateFormat="MMMM d, yyyy"
-                            minDate={new Date(2025, 0, 19, 21, 0, 0)}
+                            minDate={currentDateTime}
                             customInput={
                                 <TextField
                                     variant="outlined"
@@ -231,11 +250,28 @@ const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
                                 }
                             }}
                         >
-                            {Array.from({ length: 24 }, (_, hour) => (
-                                [0, 30].map(minute => {
-                                    const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                            {/* AM times */}
+                            {Array.from({ length: 12 }, (_, hour) => (
+                                ['00', '30'].map(minute => {
+                                    const h = hour === 0 ? 12 : hour;
+                                    const timeString = `${h}:${minute} AM`;
+                                    const value = `${hour.toString().padStart(2, '0')}:${minute}`;
                                     return (
-                                        <MenuItem key={timeString} value={timeString}>
+                                        <MenuItem key={timeString} value={value}>
+                                            {timeString}
+                                        </MenuItem>
+                                    );
+                                })
+                            )).flat()}
+                            
+                            {/* PM times */}
+                            {Array.from({ length: 12 }, (_, hour) => (
+                                ['00', '30'].map(minute => {
+                                    const h = hour === 0 ? 12 : hour;
+                                    const timeString = `${h}:${minute} PM`;
+                                    const value = `${(hour + 12).toString().padStart(2, '0')}:${minute}`;
+                                    return (
+                                        <MenuItem key={timeString} value={value}>
                                             {timeString}
                                         </MenuItem>
                                     );
