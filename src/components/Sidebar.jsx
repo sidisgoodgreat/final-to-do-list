@@ -115,9 +115,27 @@ const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
         setError('');
     };
 
-    const formatTimeForDisplay = (hour, minute, period) => {
-        const h = hour === 0 ? 12 : hour;
-        return `${h}:${minute} ${period}`;
+    const getTimeOptions = () => {
+        const options = [];
+        // AM times
+        for (let hour = 0; hour < 12; hour++) {
+            ['00', '30'].forEach(minute => {
+                const h = hour === 0 ? '12' : hour.toString().padStart(2, '0');
+                const timeString = `${h}:${minute} AM`;
+                const value = `${hour.toString().padStart(2, '0')}:${minute}`;
+                options.push({ label: timeString, value });
+            });
+        }
+        // PM times
+        for (let hour = 12; hour < 24; hour++) {
+            ['00', '30'].forEach(minute => {
+                const h = hour === 12 ? '12' : (hour - 12).toString().padStart(2, '0');
+                const timeString = `${h}:${minute} PM`;
+                const value = `${hour.toString().padStart(2, '0')}:${minute}`;
+                options.push({ label: timeString, value });
+            });
+        }
+        return options;
     };
 
     return (
@@ -250,33 +268,11 @@ const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
                                 }
                             }}
                         >
-                            {/* AM times */}
-                            {Array.from({ length: 12 }, (_, hour) => (
-                                ['00', '30'].map(minute => {
-                                    const h = hour === 0 ? 12 : hour;
-                                    const timeString = `${h}:${minute} AM`;
-                                    const value = `${hour.toString().padStart(2, '0')}:${minute}`;
-                                    return (
-                                        <MenuItem key={timeString} value={value}>
-                                            {timeString}
-                                        </MenuItem>
-                                    );
-                                })
-                            )).flat()}
-                            
-                            {/* PM times */}
-                            {Array.from({ length: 12 }, (_, hour) => (
-                                ['00', '30'].map(minute => {
-                                    const h = hour === 0 ? 12 : hour;
-                                    const timeString = `${h}:${minute} PM`;
-                                    const value = `${(hour + 12).toString().padStart(2, '0')}:${minute}`;
-                                    return (
-                                        <MenuItem key={timeString} value={value}>
-                                            {timeString}
-                                        </MenuItem>
-                                    );
-                                })
-                            )).flat()}
+                            {getTimeOptions().map(option => (
+                                <MenuItem key={option.value} value={option.value}>
+                                    {option.label}
+                                </MenuItem>
+                            ))}
                         </Select>
                     </Box>
                     {error && (
@@ -346,3 +342,4 @@ const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
 };
 
 export default Sidebar;
+
