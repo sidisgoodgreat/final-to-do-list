@@ -105,38 +105,6 @@ const TodayPage = () => {
         return `${hours}:${minutesStr} ${ampm}`;
     };
 
-    const TodoItem = ({ todo, isOverdue }) => (
-        <div className="todo-item">
-            <div className="todo-left">
-                <input 
-                    type="checkbox" 
-                    className="todo-checkbox"
-                    onChange={() => handleDeleteTodo(todo.id)}
-                />
-                <div className="todo-content">
-                    <Typography className="todo-title">{todo.title}</Typography>
-                    {todo.description && (
-                        <Typography className="todo-description">{todo.description}</Typography>
-                    )}
-                    <div className="todo-info">
-                        <CalendarTodayIcon className="todo-icon" />
-                        <span className={`todo-date ${isOverdue ? 'overdue' : ''}`}>
-                            {formatTime(todo.dueDateTimestamp)}
-                        </span>
-                        {todo.reminder !== 'none' && <NotificationsIcon className="reminder-icon" />}
-                        {todo.repeat !== 'never' && <SyncIcon className="repeat-icon" />}
-                    </div>
-                </div>
-            </div>
-            <IconButton 
-                onClick={() => handleEditTodo(todo)}
-                sx={{ color: '#666' }}
-            >
-                <EditIcon />
-            </IconButton>
-        </div>
-    );
-
     return (
         <Box sx={{ display: 'flex' }}>
             <IconButton 
@@ -186,7 +154,41 @@ const TodayPage = () => {
                         </AccordionSummary>
                         <AccordionDetails>
                             {todos.overdue.map(todo => (
-                                <TodoItem key={todo.id} todo={todo} isOverdue />
+                                <div key={todo.id} className="todo-item">
+                                    <div className="todo-left">
+                                        <input 
+                                            type="checkbox" 
+                                            className="todo-checkbox"
+                                            onChange={() => handleDeleteTodo(todo.id)}
+                                        />
+                                        <div className="todo-content">
+                                            <Typography className="todo-title">{todo.title}</Typography>
+                                            {todo.description && (
+                                                <Typography className="todo-description">
+                                                    {todo.description}
+                                                </Typography>
+                                            )}
+                                            <div className="todo-info">
+                                                <CalendarTodayIcon className="todo-icon" />
+                                                <span className="todo-date overdue">
+                                                    {formatTime(todo.dueDateTimestamp)}
+                                                </span>
+                                                {todo.reminder !== 'none' && (
+                                                    <NotificationsIcon className="reminder-icon" />
+                                                )}
+                                                {todo.repeat !== 'never' && (
+                                                    <SyncIcon className="repeat-icon" />
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <IconButton 
+                                        onClick={() => handleEditTodo(todo)}
+                                        sx={{ color: '#666' }}
+                                    >
+                                        <EditIcon />
+                                    </IconButton>
+                                </div>
                             ))}
                         </AccordionDetails>
                     </Accordion>
@@ -198,7 +200,41 @@ const TodayPage = () => {
                     </AccordionSummary>
                     <AccordionDetails>
                         {todos.today.map(todo => (
-                            <TodoItem key={todo.id} todo={todo} />
+                            <div key={todo.id} className="todo-item">
+                                <div className="todo-left">
+                                    <input 
+                                        type="checkbox" 
+                                        className="todo-checkbox"
+                                        onChange={() => handleDeleteTodo(todo.id)}
+                                    />
+                                    <div className="todo-content">
+                                        <Typography className="todo-title">{todo.title}</Typography>
+                                        {todo.description && (
+                                            <Typography className="todo-description">
+                                                {todo.description}
+                                            </Typography>
+                                        )}
+                                        <div className="todo-info">
+                                            <CalendarTodayIcon className="todo-icon" />
+                                            <span className="todo-date">
+                                                {formatTime(todo.dueDateTimestamp)}
+                                            </span>
+                                            {todo.reminder !== 'none' && (
+                                                <NotificationsIcon className="reminder-icon" />
+                                            )}
+                                            {todo.repeat !== 'never' && (
+                                                <SyncIcon className="repeat-icon" />
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <IconButton 
+                                    onClick={() => handleEditTodo(todo)}
+                                    sx={{ color: '#666' }}
+                                >
+                                    <EditIcon />
+                                </IconButton>
+                            </div>
                         ))}
                     </AccordionDetails>
                 </Accordion>
