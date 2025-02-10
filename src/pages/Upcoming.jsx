@@ -44,19 +44,24 @@ const Upcoming = () => {
     useEffect(() => {
         fetchTodos();
         const userData = localStorage.getItem('currentUser');
-        if (userData) setCurrentUser(JSON.parse(userData));
+        if (userData) {
+            setCurrentUser(JSON.parse(userData));
+        }
     }, []);
 
     const fetchTodos = async () => {
         try {
             const response = await axios.get('https://677a9e66671ca030683469a3.mockapi.io/todo/createTodo');
             const currentDateTime = new Date();
-            const todayStart = new Date(currentDateTime).setHours(0, 0, 0, 0);
+            
+            const todayEnd = new Date(currentDateTime);
+            todayEnd.setHours(23, 59, 59, 999);
 
             const validTodos = response.data.filter(todo => {
                 const todoDateTime = new Date(todo.dueDateTimestamp);
                 const todoDate = new Date(todoDateTime).setHours(0, 0, 0, 0);
-                return todoDate > todayStart;
+                const today = new Date(currentDateTime).setHours(0, 0, 0, 0);
+                return todoDate > today;
             });
 
             setTodos(validTodos.sort((a, b) => a.dueDateTimestamp - b.dueDateTimestamp));
