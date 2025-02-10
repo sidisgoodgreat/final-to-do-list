@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { 
-    Box,
-    IconButton,
-    Typography,
-    Accordion,
-    AccordionSummary,
+    Box, 
+    IconButton, 
+    Typography, 
+    Accordion, 
+    AccordionSummary, 
     AccordionDetails,
-    Avatar
 } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import NotificationsIcon from '@mui/icons-material/Notifications';
-import SyncIcon from '@mui/icons-material/Sync';
+import { 
+    Menu as MenuIcon, 
+    ExpandMore as ExpandMoreIcon, 
+    CalendarToday as CalendarTodayIcon,
+    Notifications as NotificationsIcon,
+    Sync as SyncIcon,
+    Edit as EditIcon
+} from '@mui/icons-material';
 import axios from 'axios';
 import Sidebar from '../components/Sidebar';
 import './Upcoming.css';
@@ -21,26 +23,40 @@ const Upcoming = () => {
     const [todos, setTodos] = useState([]);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [currentUser, setCurrentUser] = useState(null);
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [editingTodo, setEditingTodo] = useState(null);
+    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [selectedTime, setSelectedTime] = useState(
+        new Date().getHours().toString().padStart(2, '0') + ':' + 
+        (new Date().getMinutes() >= 30 ? '30' : '00')
+    );
+    const [newTodo, setNewTodo] = useState({
+        title: '',
+        description: '',
+        dueDateTimestamp: new Date(),
+        reminder: 'none',
+        repeat: 'never',
+        status: 'new',
+        active: 1,
+        assignee: null
+    });
 
     useEffect(() => {
         fetchTodos();
         const userData = localStorage.getItem('currentUser');
-        if (userData) {
-            setCurrentUser(JSON.parse(userData));
-        }
+        if (userData) setCurrentUser(JSON.parse(userData));
     }, []);
 
     const fetchTodos = async () => {
         try {
             const response = await axios.get('https://677a9e66671ca030683469a3.mockapi.io/todo/createTodo');
             const currentDateTime = new Date();
-            
-            const todayEnd = new Date(currentDateTime);
-            todayEnd.setHours(23, 59, 59, 999);
+            const todayStart = new Date(currentDateTime).setHours(0, 0, 0, 0);
 
             const validTodos = response.data.filter(todo => {
                 const todoDateTime = new Date(todo.dueDateTimestamp);
-                return todoDateTime > todayEnd;
+                const todoDate = new Date(todoDateTime).setHours(0, 0, 0, 0);
+                return todoDate > todayStart;
             });
 
             setTodos(validTodos.sort((a, b) => a.dueDateTimestamp - b.dueDateTimestamp));
@@ -58,12 +74,26 @@ const Upcoming = () => {
         }
     };
 
+    const handleEditTodo = (todo) => {
+        setDialogOpen(true);
+        setEditingTodo(todo);
+        setNewTodo(todo);
+        setSelectedDate(new Date(todo.dueDateTimestamp));
+        const date = new Date(todo.dueDateTimestamp);
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        setSelectedTime(`${hours}:${minutes}`);
+    };
+
     const formatTime = (timestamp) => {
-        return new Date(timestamp).toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
+        const date = new Date(timestamp);
+        let hours = date.getHours();
+        const minutes = date.getMinutes();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        const minutesStr = minutes.toString().padStart(2, '0');
+        return `${hours}:${minutesStr} ${ampm}`;
     };
 
     const groupTodosByDate = (todos) => {
@@ -101,6 +131,11 @@ const Upcoming = () => {
                 currentUser={currentUser}
                 currentPage="upcoming"
                 onTodoCreated={fetchTodos}
+                editingTodo={editingTodo}
+                onEditComplete={() => {
+                    setEditingTodo(null);
+                    setDialogOpen(false);
+                }}
             />
 
             <Box 
@@ -156,6 +191,12 @@ const Upcoming = () => {
                                                 </div>
                                             </div>
                                         </div>
+                                        <IconButton 
+                                            onClick={() => handleEditTodo(todo)}
+                                            sx={{ color: '#666' }}
+                                        >
+                                            <EditIcon />
+                                        </IconButton>
                                     </div>
                                 ))}
                             </AccordionDetails>
@@ -168,3 +209,4 @@ const Upcoming = () => {
 };
 
 export default Upcoming;
+
