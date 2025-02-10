@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { useDispatch } from 'react-redux';
+import React, { useState, useEffect } from 'react';
 import { 
     Drawer,
     IconButton,
@@ -13,18 +12,25 @@ import {
     Box,
     Typography
 } from '@mui/material';
+import { 
+    CalendarToday as CalendarTodayIcon,
+    Notifications as NotificationsIcon,
+    Sync as SyncIcon
+} from '@mui/icons-material';
 import DatePicker from 'react-datepicker';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import NotificationsIcon from '@mui/icons-material/Notifications';
-import SyncIcon from '@mui/icons-material/Sync';
 import { useNavigate } from 'react-router-dom';
-import { createTodo } from '../redux/todoSlice';
 import axios from 'axios';
 import "react-datepicker/dist/react-datepicker.css";
 import './Sidebar.css';
 
-const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
-    const dispatch = useDispatch();
+const Sidebar = ({ 
+    sidebarOpen, 
+    currentUser, 
+    currentPage, 
+    onTodoCreated, 
+    editingTodo,
+    onEditComplete 
+}) => {
     const navigate = useNavigate();
     const [dialogOpen, setDialogOpen] = useState(false);
     const currentDateTime = new Date();
@@ -34,7 +40,7 @@ const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
         (currentDateTime.getMinutes() >= 30 ? '30' : '00')
     );
     const [error, setError] = useState('');
-    const [newTodo, setNewTodo] = useState({
+    const [todo, setTodo] = useState({
         title: '',
         description: '',
         dueDateTimestamp: currentDateTime,
@@ -61,9 +67,22 @@ const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
         { value: 'monthly', label: 'Monthly' }
     ];
 
-    const handleCreateTodo = async () => {
+    useEffect(() => {
+        if (editingTodo) {
+            setTodo(editingTodo);
+            setSelectedDate(new Date(editingTodo.dueDateTimestamp));
+            const date = new Date(editingTodo.dueDateTimestamp);
+            setSelectedTime(
+                date.getHours().toString().padStart(2, '0') + ':' + 
+                date.getMinutes().toString().padStart(2, '0')
+            );
+            setDialogOpen(true);
+        }
+    }, [editingTodo]);
+
+    const handleCreateOrUpdateTodo = async () => {
         try {
-            if (!newTodo.title.trim()) {
+            if (!todo.title.trim()) {
                 setError('Please enter a title for the todo');
                 return;
             }
@@ -72,32 +91,65 @@ const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
             const [hours, minutes] = selectedTime.split(':');
             combinedDateTime.setHours(parseInt(hours), parseInt(minutes));
 
-            if (combinedDateTime < currentDateTime) {
-                setError('Cannot create todos in the past');
+            if (combinedDateTime < currentDateTime && !todo.id) {
+                setError('Cannot set todo time in the past');
                 return;
             }
 
-            const response = await axios.post('https://677a9e66671ca030683469a3.mockapi.io/todo/createTodo', {
-                ...newTodo,
+            const todoData = {
+                ...todo,
                 dueDateTimestamp: combinedDateTime.getTime()
-            });
+            };
 
-            if (response.status === 201 || response.status === 200) {
-                setDialogOpen(false);
-                resetForm();
+            let response;
+            if (todo.id) {
+                // Update existing todo
+                response = await axios.put(
+                    `https://677a9e66671ca030683469a3.mockapi.io/todo/createTodo/${todo.id}`,
+                    todoData
+                );
+            } else {
+                // Check for duplicates only when creating new todo
+                const existingResponse = await axios.get('https://677a9e66671ca030683469a3.mockapi.io/todo/createTodo');
+                const isDuplicate = existingResponse.data.some(existingTodo => 
+                    existingTodo.title.trim().toLowerCase() === todo.title.trim().toLowerCase()
+                );
+
+                if (isDuplicate) {
+                    setError('A todo with this title already exists');
+                    return;
+                }
+
+                // Create new todo
+                response = await axios.post(
+                    'https://677a9e66671ca030683469a3.mockapi.io/todo/createTodo',
+                    todoData
+                );
+            }
+
+            if (response.status === 200 || response.status === 201) {
+                handleDialogClose();
                 if (onTodoCreated) {
                     onTodoCreated();
                 }
             }
         } catch (error) {
-            console.error('Error creating todo:', error);
-            setError('Failed to create todo. Please try again.');
+            console.error('Error creating/updating todo:', error);
+            setError('Failed to save todo. Please try again.');
+        }
+    };
+
+    const handleDialogClose = () => {
+        setDialogOpen(false);
+        resetForm();
+        if (onEditComplete) {
+            onEditComplete();
         }
     };
 
     const resetForm = () => {
         const resetDateTime = new Date();
-        setNewTodo({
+        setTodo({
             title: '',
             description: '',
             dueDateTimestamp: resetDateTime,
@@ -117,24 +169,20 @@ const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
 
     const getTimeOptions = () => {
         const options = [];
-        // AM times
-        for (let hour = 0; hour < 12; hour++) {
-            ['00', '30'].forEach(minute => {
-                const h = hour === 0 ? '12' : hour.toString().padStart(2, '0');
-                const timeString = `${h}:${minute} AM`;
-                const value = `${hour.toString().padStart(2, '0')}:${minute}`;
-                options.push({ label: timeString, value });
-            });
-        }
-        // PM times
-        for (let hour = 12; hour < 24; hour++) {
-            ['00', '30'].forEach(minute => {
-                const h = hour === 12 ? '12' : (hour - 12).toString().padStart(2, '0');
-                const timeString = `${h}:${minute} PM`;
-                const value = `${hour.toString().padStart(2, '0')}:${minute}`;
-                options.push({ label: timeString, value });
-            });
-        }
+        ['AM', 'PM'].forEach(period => {
+            for (let hour = 0; hour < 12; hour++) {
+                const displayHour = hour === 0 ? 12 : hour;
+                const militaryHour = period === 'AM' ? 
+                    (hour === 12 ? 0 : hour) : 
+                    (hour === 12 ? 12 : hour + 12);
+                ['00', '30'].forEach(minutes => {
+                    options.push({
+                        label: `${displayHour}:${minutes} ${period}`,
+                        value: `${militaryHour.toString().padStart(2, '0')}:${minutes}`
+                    });
+                });
+            }
+        });
         return options;
     };
 
@@ -159,7 +207,10 @@ const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
                     },
                 }}
             >
-                <button className="add-button" onClick={() => setDialogOpen(true)}>+</button>
+                <button className="add-button" onClick={() => {
+                    resetForm();
+                    setDialogOpen(true);
+                }}>+</button>
                 <div 
                     className="calendar-icon" 
                     onClick={() => navigate('/today')}
@@ -188,10 +239,7 @@ const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
 
             <Dialog 
                 open={dialogOpen} 
-                onClose={() => {
-                    setDialogOpen(false);
-                    resetForm();
-                }}
+                onClose={handleDialogClose}
                 maxWidth="sm"
                 fullWidth
                 PaperProps={{
@@ -205,8 +253,8 @@ const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
                     <TextField
                         fullWidth
                         placeholder="What would you like to do?"
-                        value={newTodo.title}
-                        onChange={(e) => setNewTodo({...newTodo, title: e.target.value})}
+                        value={todo.title}
+                        onChange={(e) => setTodo({...todo, title: e.target.value})}
                         variant="standard"
                         InputProps={{
                             disableUnderline: true,
@@ -225,8 +273,8 @@ const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
                         multiline
                         rows={4}
                         placeholder="Add Description"
-                        value={newTodo.description}
-                        onChange={(e) => setNewTodo({...newTodo, description: e.target.value})}
+                        value={todo.description}
+                        onChange={(e) => setTodo({...todo, description: e.target.value})}
                         variant="standard"
                         InputProps={{
                             disableUnderline: true,
@@ -244,7 +292,7 @@ const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
                             selected={selectedDate}
                             onChange={setSelectedDate}
                             dateFormat="MMMM d, yyyy"
-                            minDate={currentDateTime}
+                            minDate={new Date()}
                             customInput={
                                 <TextField
                                     variant="outlined"
@@ -283,15 +331,10 @@ const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
                     <Typography variant="body2" sx={{ color: '#666', mb: 1 }}>Reminder</Typography>
                     <Select
                         fullWidth
-                        value={newTodo.reminder}
-                        onChange={(e) => setNewTodo({...newTodo, reminder: e.target.value})}
+                        value={todo.reminder}
+                        onChange={(e) => setTodo({...todo, reminder: e.target.value})}
                         variant="outlined"
-                        sx={{ 
-                            mb: 3,
-                            '& .MuiOutlinedInput-root': {
-                                borderRadius: '8px'
-                            }
-                        }}
+                        sx={{ mb: 3 }}
                     >
                         {reminderOptions.map(option => (
                             <MenuItem key={option.value} value={option.value}>
@@ -302,15 +345,10 @@ const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
                     <Typography variant="body2" sx={{ color: '#666', mb: 1 }}>Repeat</Typography>
                     <Select
                         fullWidth
-                        value={newTodo.repeat}
-                        onChange={(e) => setNewTodo({...newTodo, repeat: e.target.value})}
+                        value={todo.repeat}
+                        onChange={(e) => setTodo({...todo, repeat: e.target.value})}
                         variant="outlined"
-                        sx={{ 
-                            mb: 3,
-                            '& .MuiOutlinedInput-root': {
-                                borderRadius: '8px'
-                            }
-                        }}
+                        sx={{ mb: 3 }}
                     >
                         {repeatOptions.map(option => (
                             <MenuItem key={option.value} value={option.value}>
@@ -321,7 +359,7 @@ const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
                     <Button 
                         fullWidth 
                         variant="contained"
-                        onClick={handleCreateTodo}
+                        onClick={handleCreateOrUpdateTodo}
                         sx={{
                             py: 1.5,
                             backgroundColor: '#2196f3',
@@ -333,7 +371,7 @@ const Sidebar = ({ sidebarOpen, currentUser, currentPage, onTodoCreated }) => {
                             }
                         }}
                     >
-                        CREATE TODO
+                        {todo.id ? 'Update Todo' : 'Create Todo'}
                     </Button>
                 </DialogContent>
             </Dialog>
